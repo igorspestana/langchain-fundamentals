@@ -29,6 +29,10 @@
 - Prompt Templates e placeholders: 
     - Templates são usados para gerar prompts para modelos de LLM. 
     - Placeholders são usados para substituir partes do prompt por valores dinâmicos.
+    - PromptTemplate: template básico com variáveis de entrada
+    - ChatPromptTemplate: template para conversas com múltiplos tipos de mensagem
+    - Métodos: format(), invoke(), format_messages(), partial()
+    - Vantagens: reutilização, manutenção, flexibilidade, integração
 - OutputParsing e Pydantic: 
     - Parseamento de saída para formatos específicos, como JSON
 - Sumarização, utilizando map-reduce: 
@@ -148,3 +152,110 @@ model = init_chat_model(model="gpt-4o-mini", temperature=0.5, model_provider="op
 
 ### Recomendação
 Para a maioria dos casos, prefira **ChatOpenAI direto** pela simplicidade e performance. Use **init_chat_model** quando a flexibilidade entre provedores for necessária.
+
+## Prompt Templates
+
+### PromptTemplate Básico
+
+```python
+from langchain.prompts import PromptTemplate
+
+template = PromptTemplate(
+    input_variables=["name"],
+    template="Hello, {name}!",
+)
+
+# Métodos de formatação
+print(template.format(name="John"))  # Hello, John!
+print(template.invoke({"name": "John"}))  # Hello, John!
+```
+
+**Características:**
+- `input_variables`: lista de variáveis do template
+- `template`: string com placeholders `{variavel}`
+- `format()`: substitui variáveis e retorna string
+- `invoke()`: substitui variáveis e retorna PromptValue
+
+### ChatPromptTemplate
+
+```python
+from langchain.prompts import ChatPromptTemplate
+
+system_prompt = ("system", "You are a helpful assistant that can answer questions in {language}.")
+user_prompt = ("user", "{question}")
+
+chat_prompt_template = ChatPromptTemplate([system_prompt, user_prompt])
+
+messages = chat_prompt_template.format_messages(
+    language="English", 
+    question="What is the capital of France?"
+)
+
+for message in messages:
+    print(f"{message.type}: {message.content}")
+```
+
+**Características:**
+- Suporta múltiplos tipos de mensagem (system, user, assistant)
+- Cada mensagem é uma tupla `(tipo, template)`
+- `format_messages()`: retorna lista de objetos Message
+- Útil para conversas estruturadas
+
+### Vantagens dos Prompt Templates
+
+**Reutilização:**
+- Mesmo template para diferentes entradas
+- Evita duplicação de código
+
+**Manutenção:**
+- Mudanças centralizadas
+- Versionamento simples
+
+**Flexibilidade:**
+- Placeholders dinâmicos
+- Suporte a múltiplos tipos de mensagem
+
+**Integração:**
+- Compatível com chains e agentes
+- Funciona com diferentes provedores de LLM
+
+### Métodos Principais
+
+- `format(**kwargs)`: retorna string formatada
+- `invoke(input_dict)`: retorna PromptValue
+- `format_messages(**kwargs)`: retorna lista de Message (ChatPromptTemplate)
+- `partial(**kwargs)`: cria template com valores pré-definidos
+
+### Casos de Uso Comuns
+
+**Templates simples:**
+```python
+template = PromptTemplate(
+    input_variables=["product", "price"],
+    template="The {product} costs ${price}."
+)
+```
+
+**Templates complexos:**
+```python
+template = PromptTemplate(
+    input_variables=["context", "question", "format"],
+    template="""
+    Context: {context}
+    
+    Question: {question}
+    
+    Please answer in {format} format.
+    """
+)
+```
+
+**Chat templates:**
+```python
+chat_template = ChatPromptTemplate([
+    ("system", "You are a {role} assistant."),
+    ("user", "Help me with: {task}"),
+    ("assistant", "I'll help you with that."),
+    ("user", "{follow_up}")
+])
+```
