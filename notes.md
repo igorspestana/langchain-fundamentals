@@ -43,17 +43,27 @@
 
 ## Instalação
 
+criar ambiente virtual
 ```
 python -m venv venv
 ```
+
+ativar ambiente virtual
 ```
 source venv/bin/activate
 ```
 
+instalar dependências
 ```
 pip install langchain langchain-openai langchain-google-genai langchain-google-vertexai python-dotenv beautifulsoup4 pypdf
 ```
 
+caso tenha um requirements.txt instalar as dependências
+```
+pip install -r requirements.txt
+```
+
+caso queira criar um requirements.txt para instalar as dependências
 ```
 pip freeze > requirements.txt
 ```
@@ -720,3 +730,169 @@ analysis_pipeline = analyzer | summary_generator | llm
 - Use tipo hints para melhor debugging
 - Teste a função isoladamente antes de envolver
 - Documente comportamentos esperados de entrada/saída
+
+## Sumarização de texto
+
+### Sumarização de texto com LangChain
+
+```python
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+
+text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
+```
+O que é um chunk?
+É uma parte do texto que é processada como uma unidade.
+
+O que é um overlap?
+É a sobreposição entre chunks.
+
+chunk_size: tamanho do chunk
+chunk_overlap: overlap entre chunks
+
+É necessário fazer split do texto?
+Sim, quando o texto pode ultrapassar o limite de contexto do modelo. O split permite processar partes menores e depois combinar as respostas.
+
+Seria possível ou recomendável não fazer split do texto em algum caso?
+- Sim, quando o documento for curto o suficiente para caber confortavelmente no contexto do modelo com folga para o prompt e instruções. Como regra prática: se o total de tokens de entrada + saída esperada ficar bem abaixo do limite do modelo, prefira não dividir (menos latência, menor custo e menos risco de inconsistências entre partes).
+- Evite dividir quando a coesão global for essencial e a perda de contexto entre partes puder prejudicar a qualidade (por exemplo, resumos de artigos curtos, emails, issues pequenas, páginas breves).
+
+Quando devo necessariamente dividir?
+- Quando o documento exceder o limite de contexto do modelo.
+- Quando você quiser paralelizar o processamento para reduzir latência em coleções grandes.
+- Quando desejar controle sobre granularidade (ex.: sumarizar por seções/capítulos) ou aplicar técnicas como map_reduce/refine.
+
+Como escolher chunk_size e chunk_overlap?
+- chunk_size: escolha de forma a preservar unidades semânticas (parágrafos/seções). Valores comuns: 800–1500 caracteres para texto geral; ajuste por idioma e densidade de conteúdo. Para modelos com janelas maiores, você pode subir para 2000–4000 caracteres se desejar maior coesão por chunk.
+- chunk_overlap: 10%–20% do chunk_size costuma ser suficiente. Aumente o overlap quando há conceitos que atravessam parágrafos, reduza quando o texto é bem modular.
+- Prefira splitters que respeitem sentenças e parágrafos para minimizar cortes no meio de ideias.
+
+### RecursiveCharacterTextSplitter vs CharacterTextSplitter
+
+Qual é diferença entre RecursiveCharacterTextSplitter e CharacterTextSplitter?
+- CharacterTextSplitter: corta por comprimento fixo de caracteres, sem olhar estrutura. É simples e rápido, mas pode quebrar sentenças e parágrafos no meio.
+- RecursiveCharacterTextSplitter: tenta dividir recursivamente usando uma lista de separadores (por exemplo, "\n\n" para parágrafos, depois "\n" para linhas, depois ". " para sentenças, etc.). Mantém melhor a coesão semântica e geralmente produz chunks mais naturais.
+
+Outros splitters úteis
+- TokenTextSplitter: divide por tokens (aproxima melhor a janela do modelo).
+- MarkdownTextSplitter: respeita a hierarquia de títulos/listas em Markdown.
+- HTML/Text splitters específicos: preservam blocos semânticos (tags, seções).
+
+### Diferença entre stuff e map_reduce
+
+stuff:
+- Usa o modelo para gerar o resumo completo do texto.
+- É mais rápido e eficiente.
+- Limitação: depende da janela de contexto (só funciona bem se todo material couber no prompt com folga).
+
+map_reduce:
+- Usa o modelo para gerar o resumo de cada chunk e depois combina os resumos.
+- Escala para documentos muito longos, pois processa em partes.
+- Permite controlar a estratégia de combinação (reduce) e garantir cobertura ampla do conteúdo.
+- Tipicamente mais caro e mais lento do que stuff, por envolver múltiplas chamadas (uma por chunk + uma ou mais para redução).
+
+O map_reduce é sempre mais caro que stuff?
+- Em geral, sim. O custo cresce aproximadamente com o número de chunks processados, mais uma etapa de redução. Já o stuff faz 1 chamada, mas só se tudo couber no contexto. Se você puder usar stuff, ele é mais barato/rápido; se não couber, use map_reduce (ou refine) para escalar.
+
+Qual é mais preciso?
+- Depende do caso. Em textos curtos, stuff costuma ir melhor por manter o contexto global completo. Em textos longos, map_reduce pode ser mais robusto, pois garante que cada parte seja considerada antes da combinação. A qualidade final depende muito do prompt e da etapa de redução.
+
+Boas práticas para sumarização
+- Defina objetivo claro: extrativa (fatos) vs. abstrativa (reescrita) vs. tópica (bullet points, decisões, tarefas).
+- Dê formato de saída explícito: bullets, JSON, parágrafos, limite de palavras/caracteres.
+- Controle estilo: neutro, técnico, para leigos, com/sem citações.
+- Use temperatura baixa (0.0–0.3) para resumos factuais e consistentes.
+- Adicione instruções para evitar alucinações e citar trechos ou seções quando apropriado.
+- Em map_reduce, seja explícito na etapa de reduce sobre como combinar, deduplicar e priorizar informações.
+
+Exemplos práticos
+
+Exemplo 1: Sumarização com stuff (documento curto)
+```python
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain.prompts import PromptTemplate
+from langchain_openai import ChatOpenAI
+
+text = """Seu texto curto que cabe no contexto do modelo..."""
+
+prompt = PromptTemplate(
+    input_variables=["document"],
+    template=(
+        "Você é um assistente que produz resumos fiéis e concisos.\n"
+        "Resuma o seguinte documento em até 5 bullet points, sem inventar informações.\n\n"
+        "Documento:\n{document}"
+    ),
+)
+
+llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.2)
+
+chain = prompt | llm
+summary = chain.invoke({"document": text})
+print(summary.content)
+```
+
+Exemplo 2: Sumarização com map_reduce (documento longo)
+```python
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain.prompts import PromptTemplate
+from langchain_openai import ChatOpenAI
+from langchain_core.runnables import RunnableParallel, RunnableLambda
+
+long_text = """Seu texto longo... (muito acima da janela do modelo)"""
+
+splitter = RecursiveCharacterTextSplitter(chunk_size=1200, chunk_overlap=200)
+chunks = splitter.split_text(long_text)
+
+# Prompt para map (resumo por chunk)
+map_prompt = PromptTemplate(
+    input_variables=["chunk"],
+    template=(
+        "Resuma fielmente o trecho abaixo em 3-5 bullets, sem perder detalhes críticos.\n\n{chunk}"
+    ),
+)
+
+# Prompt para reduce (combinar parciais)
+reduce_prompt = PromptTemplate(
+    input_variables=["partials"],
+    template=(
+        "A seguir estão resumos parciais de um documento maior.\n"
+        "Combine-os em um resumo único, conciso e sem redundâncias, com até 7 bullets.\n\n{partials}"
+    ),
+)
+
+llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.2)
+
+# Fase map: processa cada chunk
+def map_fn(chunk: str) -> str:
+    return (map_prompt | llm).invoke({"chunk": chunk}).content
+
+mapped = [map_fn(c) for c in chunks]
+
+# Fase reduce: combina resumos
+partials_joined = "\n\n".join(mapped)
+final_summary = (reduce_prompt | llm).invoke({"partials": partials_joined}).content
+print(final_summary)
+```
+
+Observações de custo e performance
+- stuff: 1 chamada ao modelo (rápido e barato), mas limitado pela janela de contexto.
+- map_reduce: ~N chamadas (N = número de chunks) + 1 chamada de redução. Custo e latência crescem com N. Você pode paralelizar a fase map para reduzir tempo.
+- refine (alternativa): processa iterativamente os chunks, refinando um resumo acumulado. Custo geralmente entre stuff e map_reduce; pode manter melhor coerência sequencial.
+
+Checklist de decisão rápida
+- Documento cabe no contexto com folga? Use stuff.
+- Documento longo exige cobertura ampla? Use map_reduce ou refine.
+- Precisa de formato estruturado (JSON/bullets)? Especifique claramente no prompt.
+- Precisa de citações/trechos? Instrua o modelo a incluir referências de seção/linha quando possível.
+
+### Guia prático: quando usar stuff, map_reduce ou sem split
+
+- **Sem split (documento único curto)**: quando o texto cabe confortavelmente na janela do modelo com sobra para instruções e formato de saída. Menor custo e latência; preserva coesão global. Exemplo: `2-chains-e-processamento/8-sumarizacao-sem-split.py`.
+
+- **Stuff + split (documento moderado, cabe após dividir)**: quando o documento é médio e você pode concatenar os chunks no prompt final sem exceder o contexto. Útil se quiser uma única chamada final mantendo boa cobertura. Custo baixo a moderado. Exemplo: `2-chains-e-processamento/6-sumarizacao-com-stuff.py` com `RecursiveCharacterTextSplitter`.
+
+- **Map_reduce (documento longo/grande, acima do contexto)**: quando o material excede claramente a janela do modelo. Cada chunk é resumido (map) e os resumos são combinados (reduce), garantindo cobertura ampla. Custo/latência maiores, porém mais escalável e robusto. Exemplo: `2-chains-e-processamento/7-sumarizacao-com-mapreduce.py`.
+
+Justificativas rápidas:
+- **Precisão/coerência**: sem split tende a manter melhor contexto global em textos curtos; em textos muito longos, map_reduce mitiga perda de contexto por chunk.
+- **Custo/latência**: sem split < stuff + split < map_reduce (tipicamente).
+- **Escala**: map_reduce é a opção segura para volumes longos; stuff funciona bem até o limite efetivo da janela; sem split é ideal apenas para textos curtos.
