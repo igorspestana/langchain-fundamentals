@@ -1111,3 +1111,24 @@ pipeline = map_stage | prepare_reduce_input | reduce_chain
 - **Para produção com prompts específicos**: Use a abordagem **tradicional com personalização** (Arquivo 7 + prompts customizados)
 - **Para controle total e debugging**: Use a abordagem **manual** (Arquivo 9)
 - **Para entender o funcionamento interno**: Implemente a versão **manual** primeiro
+
+## Agentes de IA
+
+- Software comum que utiliza LLMs para tomar decisões e executar ações.
+- LLM como core da aplicação.
+- Agente pode decidir qual ferramenta usar.
+- Ferramentas podem ser:
+    - Modelos de LLM
+    - Prompts
+    - Funções Python
+    - Ferramentas externas
+    - APIs
+    - Banco de dados
+    - Arquivos
+    - etc.
+- Agente pode executar ações / tarefas específicas.
+- ReAct: Reasoning Action.
+    - Thought
+    - Action
+    - Observation
+    - Final Answer
