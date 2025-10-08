@@ -1132,3 +1132,21 @@ pipeline = map_stage | prepare_reduce_input | reduce_chain
     - Action
     - Observation
     - Final Answer
+
+## Memória
+
+- LLMs são stateless: não guardam informações
+- "Conversa": não são armazenadas no modelo
+- Enviar novamente 100% do histórico de mensagens
+- LLM tem memória de interna (componentes de baixo nível)
+
+- Histórico: curto prazo vs longo prazo
+- Curto prazo: memória que é utilizada durante uma transação / conversa / processamento
+    - Armazenar temporariamente: banco de dados de cache, na memória do servidor guardando em variáveis dentro da sessão
+    - Armazenar em um banco de dados
+- Longo prazo: histórico da conversa
+    - Armazenar em um banco de dados
+    - Possibilidade de restaurar o conteúdo anterior para eu continuar da onde eu parei
+    - Ler esse histórico para ter contexto para continuar a conversa
+    - Sumarização: estratégia para economizar token e não carregar informações desnecessárias
+    - Langchain tem recursos para resgatar o histórico de interações que precisa para enviar para o llm.
