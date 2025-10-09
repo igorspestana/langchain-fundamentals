@@ -1114,39 +1114,252 @@ pipeline = map_stage | prepare_reduce_input | reduce_chain
 
 ## Agentes de IA
 
-- Software comum que utiliza LLMs para tomar decisões e executar ações.
-- LLM como core da aplicação.
-- Agente pode decidir qual ferramenta usar.
-- Ferramentas podem ser:
-    - Modelos de LLM
-    - Prompts
-    - Funções Python
-    - Ferramentas externas
-    - APIs
-    - Banco de dados
-    - Arquivos
-    - etc.
-- Agente pode executar ações / tarefas específicas.
-- ReAct: Reasoning Action.
-    - Thought
-    - Action
-    - Observation
-    - Final Answer
+### Conceito Fundamental
+- **Definição**: software que utiliza LLMs como núcleo para tomar decisões autônomas e executar ações
+- **Autonomia**: capacidade de decidir qual ferramenta usar baseado no contexto
+- **Flexibilidade**: pode combinar múltiplas ferramentas para resolver problemas complexos
+- **Iterativo**: pode executar múltiplas ações em sequência até atingir o objetivo
 
-## Memória
+### Arquitetura de Agentes
 
-- LLMs são stateless: não guardam informações
-- "Conversa": não são armazenadas no modelo
-- Enviar novamente 100% do histórico de mensagens
-- LLM tem memória de interna (componentes de baixo nível)
+#### Componentes Principais
+- **LLM Core**: modelo de linguagem que toma as decisões
+- **Tools/Tools**: conjunto de ferramentas disponíveis
+- **Memory**: armazenamento de contexto e histórico
+- **Executor**: motor que executa as ações decididas
+- **Parser**: interpreta as respostas do LLM
 
-- Histórico: curto prazo vs longo prazo
-- Curto prazo: memória que é utilizada durante uma transação / conversa / processamento
-    - Armazenar temporariamente: banco de dados de cache, na memória do servidor guardando em variáveis dentro da sessão
-    - Armazenar em um banco de dados
-- Longo prazo: histórico da conversa
-    - Armazenar em um banco de dados
-    - Possibilidade de restaurar o conteúdo anterior para eu continuar da onde eu parei
-    - Ler esse histórico para ter contexto para continuar a conversa
-    - Sumarização: estratégia para economizar token e não carregar informações desnecessárias
-    - Langchain tem recursos para resgatar o histórico de interações que precisa para enviar para o llm.
+#### Fluxo de Execução
+1. **Input**: recebe pergunta ou tarefa do usuário
+2. **Reasoning**: LLM analisa e decide próxima ação
+3. **Tool Selection**: escolhe ferramenta apropriada
+4. **Execution**: executa a ação com a ferramenta
+5. **Observation**: analisa resultado da ação
+6. **Iteration**: repete até completar a tarefa
+
+### Tipos de Ferramentas (Tools)
+
+#### 1. Ferramentas Computacionais
+- **Funções Python**: cálculos, processamento de dados
+- **APIs REST**: integração com serviços externos
+- **Bibliotecas**: pandas, numpy, scikit-learn
+- **Scripts**: automação de tarefas
+
+#### 2. Ferramentas de Dados
+- **Bancos de dados**: consultas SQL, NoSQL
+- **Arquivos**: leitura/escrita de documentos
+- **APIs de dados**: serviços de terceiros
+- **Vector stores**: busca semântica
+
+#### 3. Ferramentas de Comunicação
+- **Email**: envio e recebimento
+- **Slack/Discord**: integração com chat
+- **Webhooks**: notificações
+- **SMS**: mensagens de texto
+
+#### 4. Ferramentas de Busca
+- **Web search**: busca na internet
+- **Wikipedia**: consulta de informações
+- **Documentação**: busca em docs técnicos
+- **Knowledge bases**: bases de conhecimento
+
+### Padrão ReAct (Reasoning + Acting)
+
+#### Ciclo ReAct
+1. **Thought**: agente pensa sobre a situação atual
+2. **Action**: decide qual ação tomar
+3. **Observation**: observa o resultado da ação
+4. **Final Answer**: fornece resposta final quando objetivo é atingido
+
+#### Exemplo de Execução
+```
+Thought: Preciso buscar informações sobre o clima atual
+Action: usar ferramenta de busca na web
+Observation: temperatura é 25°C, céu nublado
+Thought: Agora posso responder ao usuário
+Final Answer: O clima atual é 25°C com céu nublado
+```
+
+### Tipos de Agentes no LangChain
+
+#### 1. Zero-Shot ReAct Agent
+- **Características**: não tem memória de interações anteriores
+- **Uso**: tarefas simples e independentes
+- **Vantagem**: simplicidade e rapidez
+- **Limitação**: não aprende com histórico
+
+#### 2. Conversational ReAct Agent
+- **Características**: mantém memória da conversa
+- **Uso**: interações contínuas com usuário
+- **Vantagem**: contexto conversacional
+- **Aplicação**: chatbots inteligentes
+
+#### 3. Plan-and-Execute Agent
+- **Características**: cria plano antes de executar
+- **Uso**: tarefas complexas com múltiplos passos
+- **Vantagem**: melhor organização e eficiência
+- **Aplicação**: automação de workflows
+
+#### 4. Self-Ask-with-Search Agent
+- **Características**: faz perguntas para si mesmo
+- **Uso**: pesquisa e análise de informações
+- **Vantagem**: exploração sistemática
+- **Aplicação**: assistentes de pesquisa
+
+### Implementação Prática
+
+#### Configuração Básica
+```python
+from langchain.agents import initialize_agent, Tool
+from langchain.llms import OpenAI
+
+# Definir ferramentas
+tools = [
+    Tool(name="Calculator", func=calculator_func),
+    Tool(name="WebSearch", func=web_search_func)
+]
+
+# Inicializar agente
+agent = initialize_agent(
+    tools=tools,
+    llm=OpenAI(),
+    agent_type="zero-shot-react-description"
+)
+```
+
+#### Customização de Ferramentas
+- **Descrições claras**: ferramentas devem ter descrições precisas
+- **Parâmetros**: definir inputs necessários
+- **Validação**: verificar inputs antes da execução
+- **Error handling**: tratar erros graciosamente
+
+### Considerações de Design
+
+#### Escolha de Ferramentas
+- **Relevância**: ferramentas devem ser úteis para o domínio
+- **Confiabilidade**: ferramentas devem ser estáveis
+- **Performance**: considerar latência e custos
+- **Segurança**: validar inputs e outputs
+
+#### Limitações e Desafios
+- **Hallucination**: agente pode "inventar" ferramentas
+- **Loops infinitos**: agente pode ficar preso em ciclos
+- **Custos**: múltiplas chamadas ao LLM aumentam custos
+- **Complexidade**: debugging pode ser difícil
+
+#### Boas Práticas
+- **Tool descriptions**: descrições claras e específicas
+- **Error handling**: tratamento robusto de erros
+- **Logging**: registrar ações para debugging
+- **Testing**: testar com cenários diversos
+- **Monitoring**: acompanhar performance e custos
+
+### Casos de Uso Comuns
+
+#### 1. Assistente de Desenvolvimento
+- **Ferramentas**: GitHub API, compiladores, testes
+- **Aplicação**: automação de desenvolvimento
+- **Exemplo**: criar PRs, executar testes, deploy
+
+#### 2. Assistente de Pesquisa
+- **Ferramentas**: web search, databases, APIs
+- **Aplicação**: coleta e análise de informações
+- **Exemplo**: relatórios de mercado, análise de dados
+
+#### 3. Assistente de Suporte
+- **Ferramentas**: knowledge base, ticketing, chat
+- **Aplicação**: atendimento ao cliente
+- **Exemplo**: resolução de problemas, escalação
+
+#### 4. Assistente de Automação
+- **Ferramentas**: APIs, scripts, schedulers
+- **Aplicação**: automação de processos
+- **Exemplo**: backup, monitoramento, relatórios
+
+## Memória em LLMs
+
+### Conceito Fundamental
+- **LLMs são stateless**: não mantêm informações entre requisições
+- **Cada interação é independente**: o modelo não "lembra" de conversas anteriores
+- **Necessidade de contexto**: toda informação relevante deve ser enviada a cada requisição
+- **Memória interna do modelo**: limitada ao contexto da requisição atual (context window)
+
+### Tipos de Memória
+
+#### 1. Memória de Curto Prazo (Session Memory)
+- **Duração**: durante uma única sessão/conversa
+- **Armazenamento**:
+    - Variáveis em memória do servidor
+    - Cache temporário (Redis, Memcached)
+    - Estado da aplicação
+- **Uso**: manter contexto durante uma conversa ativa
+- **Limitação**: perdida quando a sessão termina
+
+#### 2. Memória de Longo Prazo (Persistent Memory)
+- **Duração**: persistente entre sessões
+- **Armazenamento**:
+    - Bancos de dados relacionais (PostgreSQL, MySQL)
+    - Bancos NoSQL (MongoDB, DynamoDB)
+    - Vector databases (Pinecone, Weaviate)
+- **Funcionalidades**:
+    - Restaurar conversas anteriores
+    - Continuar de onde parou
+    - Buscar contexto histórico relevante
+    - Manter perfil do usuário
+
+### Estratégias de Gerenciamento de Memória
+
+#### 1. Sliding Window
+- **Conceito**: janela deslizante de mensagens/tokens
+- **Funcionamento**: mantém apenas as N mensagens mais recentes
+- **Vantagem**: controle preciso do uso de tokens
+- **Desvantagem**: pode perder contexto importante
+
+#### 2. Sumarização
+- **Objetivo**: reduzir volume de histórico mantendo informações essenciais
+- **Técnicas**:
+    - Resumir mensagens antigas
+    - Extrair pontos-chave
+    - Manter apenas informações relevantes
+- **Benefício**: economia de tokens e custos
+
+#### 3. Memória Seletiva
+- **Conceito**: armazenar apenas informações relevantes
+- **Critérios de seleção**:
+    - Relevância para o contexto atual
+    - Importância para o usuário
+    - Frequência de referência
+- **Implementação**: algoritmos de scoring e filtragem
+
+### Implementação no LangChain
+
+#### Componentes de Memória
+- **ConversationBufferMemory**: armazena todo o histórico
+- **ConversationBufferWindowMemory**: sliding window
+- **ConversationSummaryMemory**: sumarização automática
+- **ConversationTokenBufferMemory**: baseado em tokens
+- **VectorStoreRetrieverMemory**: busca semântica
+
+#### Integração com Chains
+- Memória é injetada automaticamente nos prompts
+- Contexto é adicionado antes das mensagens do usuário
+- Suporte a múltiplos tipos de memória simultaneamente
+
+### Considerações Práticas
+
+#### Limitações de Context Window
+- **Tokens limitados**: cada modelo tem um limite máximo
+- **Custo crescente**: mais tokens = maior custo
+- **Performance**: contextos muito grandes podem degradar qualidade
+
+#### Estratégias de Otimização
+- **Truncamento inteligente**: remover partes menos relevantes
+- **Compressão**: técnicas de compactação de texto
+- **Hierarquia**: estruturar informações por importância
+- **Cache**: reutilizar processamentos anteriores
+
+#### Segurança e Privacidade
+- **Dados sensíveis**: não armazenar informações confidenciais
+- **Criptografia**: proteger dados em trânsito e repouso
+- **Retenção**: políticas de limpeza de dados
+- **Compliance**: seguir regulamentações (LGPD, GDPR)
