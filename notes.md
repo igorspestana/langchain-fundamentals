@@ -1363,3 +1363,99 @@ agent = initialize_agent(
 - **Criptografia**: proteger dados em trânsito e repouso
 - **Retenção**: políticas de limpeza de dados
 - **Compliance**: seguir regulamentações (LGPD, GDPR)
+
+## Data Loading e RAG
+
+### Conceitos Fundamentais
+
+- Busca semântica: busca por similaridade em bancos de dados vetoriais.
+- RAG: Retrieval-Augmented Generation.
+- Embeddings: é o vetor resultante de um processo de codificação semântica. É um vetor especial, aprendido por um modelo de IA, que captura o significado (semântico) de algo — uma palavra, frase, imagem, som, etc.
+- Todo embedding é um vetor, mas nem todo vetor é um embedding.
+- Vector stores: armazenam vetores em bancos de dados vetoriais.
+- Chunking: divide o texto em partes menores para processamento.
+- Splitting: divide o texto em partes menores para processamento.
+- Summarization: resume o texto em um resumo conciso.
+- Question Answering: responde perguntas sobre o texto.
+- Text Generation: gera texto.
+
+- Document Loaders: são usados para carregar documentos de diferentes formatos.
+    - Website
+    - CSV
+    - JSON
+    - Markdown
+    - PDF
+    - Text
+    - Web
+    - Excel
+    - PowerPoint
+    - Word
+    - Email
+    - SMS
+
+- Os documentos são transformados em vetores multidimensionais (embeddings).
+- Os vetores são armazenados em bancos de dados vetoriais.
+- Os vetores são usados para buscar similaridade em textos.
+- No banco de dados vetorial é guardado o texto original, vetores e metadados.
+- Metadados são usados para buscar similaridade em textos. São informações como o título do documento, autor, data de criação, etc.
+
+- Como é feita a busca semântica (por similaridade) em bancos de dados vetoriais?
+    - O vetor de busca é comparado com os vetores armazenados no banco de dados.
+    - A similaridade é calculada usando a distância euclidiana ou outras métricas de similaridade.
+    - Os documentos mais similares são retornados.
+    - Exemplo:
+        - Pergunta: "Quem é o autor do livro '1984'?"
+        - Transforma a pergunta em vetor.
+        - Busca o vetor no banco de dados vs vetores da pergunta.
+        - Retorna os documentos com vetores mais próximos e por isso mais similares.
+- K é o número de documentos retornados.
+
+- A complexidade da implementação do RAG para garantir que o resultado seja correto está na extração dos dados, tratamento dos dados, separação dos dados, armazenamento dos dados, metadados das informações, quantidade de documentos, etc. É necessário ter prompts adequados e ter sets de evaluation.
+
+### Chunking
+
+- Chunking é o processo de dividir o texto em partes menores para processamento.
+- Chunking é usado para processar documentos longos.
+- Chunking é usado para processar documentos que não cabem no contexto do modelo.
+- Chunking é usado para processar documentos que precisam de mais contexto para serem processados.
+
+- Processo: Pegar um pdf grande, converte em tokens, divide em partes menores com uma quantidade de tokens adequada para o modelo, adiciona metadados e armazena em um banco de dados vetorial.
+- Quando o usuário faz uma pergunta, o modelo busca no banco de dados vetorial os documentos mais similares e retorna a resposta.
+
+- Overlap é a sobreposição entre chunks.
+- Overlap é usado para manter o contexto entre chunks.
+- Exemplo: chunk_size = 1000, chunk_overlap = 200.
+- O chunk 1 vai de 0 a 1000 e o chunk 2 vai de 200 a 1200.
+- O chunk 2 vai de 200 a 1200 e o chunk 3 vai de 400 a 1400.
+- E assim por diante.
+
+### Splitting
+
+- Splitting é o processo de dividir o texto em partes menores para processamento.
+- Splitting é usado para processar documentos longos.
+- Splitting é usado para processar documentos que não cabem no contexto do modelo.
+- Splitting é usado para processar documentos que precisam de mais contexto para serem processados.
+- Splitting é usado para processar documentos que precisam de mais contexto para serem processados.
+
+Qual é a diferença entre chunking e splitting?
+Splitting é cortar o livro por páginas, independentemente do conteúdo.
+Splitting = cortar o texto em pedaços menores.
+Chunking é agrupar trechos de forma que cada bloco contenha uma ideia completa — por exemplo, cada “subtópico” do capítulo, com um pouco de contexto extra no início e no fim.
+Chunking = criar blocos de texto úteis e compreensíveis para o modelo.
+
+### Webbase loader
+
+- Webbase loader é um loader que carrega documentos da web.
+- Webbase loader é usado para carregar documentos da web.
+
+### Banco de dados vetorial
+
+- São usados para armazenar vetores em bancos de dados vetoriais.
+- São usados para buscar similaridade em textos.
+- São usados para processar documentos longos.
+- São usados para processar documentos que não cabem no contexto do modelo.
+- São usados para processar documentos que precisam de mais contexto para serem processados.
+- Pinecone, PGVector, Weaviate, FAISS, etc.
+- PGvector é uma extensão do Postgres para armazenar vetores.
+- Pincecone, Weaviate, FAISS são bancos de dados vetoriais focados para trabalhar com embeddings e por isso tem uma performance melhor que o PGvector em contexto de milhões de vetores.
+- A dificuldade de trabalhar com PGvector em alta escala é a necessidade de ter conhecimento de gerenciamento de banco de dados. Pinecone é auto-gerenciado.
